@@ -1,0 +1,55 @@
+name: Deploy Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cf-deploy-loven7-mail
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install admin dependencies
+        run: npm ci --prefix apps/admin
+
+      - name: Build admin
+        run: npm run build:admin
+
+      - name: Deploy admin Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ADMIN_PAGES_PROJECT_NAME: loven7-mail-admin
+          CF_PAGES_BRANCH: main
+        run: node apps/admin/scripts/deploy-pages.mjs
+
+      - name: Install webmail dependencies
+        run: npm ci --prefix apps/webmail
+
+      - name: Build webmail
+        run: npm run build:webmail
+
+      - name: Deploy webmail Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WEBMAIL_PAGES_PROJECT_NAME: loven7-mail-webmail
+          CF_PAGES_BRANCH: main
+        run: node apps/webmail/scripts/deploy-pages.mjs
